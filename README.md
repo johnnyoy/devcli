@@ -1,6 +1,6 @@
 # devcli
 
-A lean, portable Docker image with core dev tools plus **Claude Code** and **OpenClaw**. Run `devcli` in any folder and it launches Claude Code inside a container with that folder mounted as `/workspace`. Auth config persists across runs via your host home directory — log in once, use everywhere.
+A lean, portable Docker image with core dev tools plus **Claude Code** and the **pi harness**. Run `devcli` in any folder and it launches Claude Code inside a container with that folder mounted as `/workspace`. Auth config persists across runs via your host home directory — log in once, use everywhere.
 
 ## What's inside
 
@@ -12,7 +12,7 @@ A lean, portable Docker image with core dev tools plus **Claude Code** and **Ope
 | git, gh | version control and GitHub CLI |
 | ripgrep, jq, make, curl, wget | everyday dev tools |
 | **Claude Code** (`@anthropic-ai/claude-code`) | AI coding agent |
-| **OpenClaw** (`openclaw`) | AI coding agent |
+| **pi** (`@earendil-works/pi-coding-agent`) | minimal AI coding harness |
 
 ---
 
@@ -95,7 +95,7 @@ Run `devcli` from **any folder**. It mounts that folder as `/workspace` inside t
 cd C:\Projects\myapp
 devcli                       :: opens Claude Code
 devcli bash                  :: opens a bash shell
-devcli openclaw              :: opens OpenClaw
+devcli pi                    :: opens the pi harness
 devcli claude --resume       :: pass flags through
 ```
 
@@ -105,7 +105,7 @@ devcli claude --resume       :: pass flags through
 cd ~/projects/myapp
 devcli                       # opens Claude Code
 devcli bash                  # opens a bash shell
-devcli openclaw              # opens OpenClaw
+devcli pi                    # opens the pi harness
 devcli claude --resume       # pass flags through
 ```
 
@@ -115,7 +115,7 @@ The container is ephemeral — it is removed automatically when you exit.
 
 ## Auth persistence
 
-Your host `~/.claude`, `~/.openclaw`, and `~/.config/gh` are bind-mounted into every container. Log in once and you stay logged in. Nothing credential-related is stored in the image.
+Your host `~/.claude` and `~/.config/gh` are bind-mounted into every container. Log in once and you stay logged in. Nothing credential-related is stored in the image.
 
 ### Passing an API key via environment variable
 
@@ -138,34 +138,6 @@ devcli
 ```
 
 `GITHUB_TOKEN` and `GH_TOKEN` are also forwarded if set.
-
----
-
-## OpenClaw gateway (background daemon)
-
-The gateway runs as a separate detached container so you don't need a dedicated terminal. It uses `--restart unless-stopped`, so it comes back automatically after Docker restarts.
-
-```bash
-devcli gateway up       # start the background daemon
-devcli gateway url      # print the tokenized dashboard URL
-devcli gateway status   # confirm it is running
-devcli gateway logs     # tail logs
-devcli gateway down     # stop it
-```
-
-The gateway shares `~/.openclaw` with your interactive `devcli` sessions so they all use the same token.
-
-**Windows CMD / PowerShell alternative** (from the repo dir):
-```powershell
-.\make.ps1 gateway up
-.\make.ps1 gateway url
-```
-
-**macOS / Linux (from the repo dir):**
-```bash
-make gateway CMD=up
-make gateway CMD=url
-```
 
 ---
 
@@ -204,9 +176,6 @@ Run from the `devcli` repo directory:
 | `.\make.ps1 install-path` | `make install-path` | PATH setup only |
 | `.\make.ps1 uninstall-path` | `make uninstall-path` | Remove from PATH |
 | `.\make.ps1 doctor` | `make doctor` | Print all tool versions |
-| `.\make.ps1 gateway up` | `make gateway CMD=up` | Start gateway daemon |
-| `.\make.ps1 gateway url` | `make gateway CMD=url` | Print dashboard URL |
-| `.\make.ps1 gateway down` | `make gateway CMD=down` | Stop gateway daemon |
 
 ---
 
@@ -230,7 +199,7 @@ make rebuild
 ```powershell
 docker build -t devcli:latest `
     --build-arg CLAUDE_VERSION=1.2.3 `
-    --build-arg OPENCLAW_VERSION=4.5.6 `
+    --build-arg PI_VERSION=4.5.6 `
     -f .devcontainer/Dockerfile .
 ```
 
@@ -238,7 +207,7 @@ docker build -t devcli:latest `
 ```bash
 docker build -t devcli:latest \
     --build-arg CLAUDE_VERSION=1.2.3 \
-    --build-arg OPENCLAW_VERSION=4.5.6 \
+    --build-arg PI_VERSION=4.5.6 \
     -f .devcontainer/Dockerfile .
 ```
 
@@ -252,7 +221,6 @@ Each `devcli` call runs:
 docker run --rm -it
   -v "$PWD:/workspace"           ← current folder becomes /workspace
   -v "$HOME/.claude:/home/dev/.claude"
-  -v "$HOME/.openclaw:/home/dev/.openclaw"
   -v "$HOME/.config/gh:/home/dev/.config/gh"
   devcli:latest [your command or "claude" by default]
 ```

@@ -8,7 +8,6 @@
 #   .\make.ps1 uninstall-path remove bin\ from user PATH
 #   .\make.ps1 rebuild        force-rebuild (--no-cache, refreshes agents)
 #   .\make.ps1 doctor         print tool versions
-#   .\make.ps1 gateway <sub>  manage the OpenClaw background gateway
 #   .\make.ps1 help           show this help
 # =============================================================================
 [CmdletBinding()]
@@ -35,8 +34,6 @@ devcli control surface
   .\make.ps1 uninstall-path   Remove bin\ from user PATH
   .\make.ps1 rebuild          Force rebuild with --no-cache (refreshes agents)
   .\make.ps1 doctor           Print versions of all tools in the container
-  .\make.ps1 gateway <sub>    Manage the OpenClaw background gateway
-                              subs: up | down | status | url | logs
   .\make.ps1 help             Show this help
 '@ | Write-Host
 }
@@ -71,7 +68,6 @@ function Remove-FromPath {
 
 function Ensure-AuthDirs {
     $null = New-Item -ItemType Directory -Force (Join-Path $env:USERPROFILE '.claude')
-    $null = New-Item -ItemType Directory -Force (Join-Path $env:USERPROFILE '.openclaw')
     $null = New-Item -ItemType Directory -Force (Join-Path $env:USERPROFILE '.config\gh')
 }
 
@@ -118,16 +114,9 @@ printf "%-12s %s\n" "ripgrep"  "$(rg --version | head -n1)"
 printf "%-12s %s\n" "jq"       "$(jq --version)"
 printf "%-12s %s\n" "make"     "$(make --version | head -n1)"
 printf "%-12s %s\n" "claude"   "$(claude --version 2>/dev/null || echo 'not found')"
-printf "%-12s %s\n" "openclaw" "$(openclaw --version 2>/dev/null || echo 'not found')"
+printf "%-12s %s\n" "pi"       "$(pi --version 2>/dev/null || echo 'not found')"
 '@
         if ($LASTEXITCODE -ne 0) { throw "docker run failed" }
-    }
-
-    'gateway' {
-        $sub = if ($Rest.Count -gt 0) { $Rest[0] } else { '' }
-        $devcliCmd = Join-Path $binDir 'devcli.cmd'
-        & cmd /c "$devcliCmd" gateway $sub
-        exit $LASTEXITCODE
     }
 
     default {

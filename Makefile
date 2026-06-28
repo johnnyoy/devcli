@@ -7,7 +7,6 @@
 #   make uninstall-path   remove the symlink
 #   make rebuild          force-rebuild with --no-cache
 #   make doctor           print tool versions
-#   make gateway CMD=up   manage the OpenClaw background gateway
 # =============================================================================
 
 HERE    := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
@@ -17,8 +16,6 @@ BIN_DIR := $(HERE)/bin
 LOCAL_BIN := $(HOME)/.local/bin
 LINK    := $(LOCAL_BIN)/devcli
 DEVCLI  := $(BIN_DIR)/devcli
-# Subcommand for gateway target: make gateway CMD=up|down|status|url|logs
-CMD     ?=
 
 # On native Linux (not macOS, not WSL2+Docker Desktop), pass the host UID/GID
 # as build args so the in-container dev user matches the host user and
@@ -33,7 +30,7 @@ endif
 
 .DEFAULT_GOAL := help
 
-.PHONY: help build rebuild install install-path uninstall-path doctor gateway
+.PHONY: help build rebuild install install-path uninstall-path doctor
 
 help: ## Show this help
 	@echo "devcli control surface"
@@ -44,7 +41,6 @@ help: ## Show this help
 	@echo "  make uninstall-path   Remove the symlink"
 	@echo "  make rebuild          Force rebuild --no-cache (refreshes agents)"
 	@echo "  make doctor           Print versions of all tools in the container"
-	@echo "  make gateway CMD=up   Manage the OpenClaw gateway (up|down|status|url|logs)"
 
 build: ## Build the image
 	docker build $(_UID_ARGS) -t $(IMAGE) -f $(DOCKERFILE) $(HERE)
@@ -89,8 +85,5 @@ doctor: ## Print versions of all tools in the container
 	    printf "%-12s %s\n" "jq"       "$$(jq --version)"; \
 	    printf "%-12s %s\n" "make"     "$$(make --version | head -n1)"; \
 	    printf "%-12s %s\n" "claude"   "$$(claude --version 2>/dev/null || echo "not found")"; \
-	    printf "%-12s %s\n" "openclaw" "$$(openclaw --version 2>/dev/null || echo "not found")"; \
+	    printf "%-12s %s\n" "pi"       "$$(pi --version 2>/dev/null || echo "not found")"; \
 	'
-
-gateway: ## Run: make gateway CMD=<up|down|status|url|logs>
-	@$(DEVCLI) gateway $(CMD)

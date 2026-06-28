@@ -7,7 +7,7 @@ FROM python:3.13-slim-bookworm
 
 ARG NODE_MAJOR=22
 ARG CLAUDE_VERSION=latest
-ARG OPENCLAW_VERSION=latest
+ARG PI_VERSION=latest
 ARG USER_UID=1000
 ARG USER_GID=1000
 
@@ -54,10 +54,9 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
     && apt-get install -y --no-install-recommends gh \
     && rm -rf /var/lib/apt/lists/*
 
-# --- AI agents: Claude Code + OpenClaw -------------------------------------
-RUN npm install -g \
-        "@anthropic-ai/claude-code@${CLAUDE_VERSION}" \
-        "openclaw@${OPENCLAW_VERSION}" \
+# --- AI agents: Claude Code + pi harness -----------------------------------
+RUN npm install -g "@anthropic-ai/claude-code@${CLAUDE_VERSION}" \
+    && npm install -g --ignore-scripts "@earendil-works/pi-coding-agent@${PI_VERSION}" \
     && npm cache clean --force
 
 # --- Non-root developer user ------------------------------------------------
@@ -73,7 +72,6 @@ RUN if ! getent group "${USER_GID}" >/dev/null; then groupadd -g "${USER_GID}" d
 # (and the host bind-mount) don't land as root-owned inside the container.
 RUN mkdir -p \
         /home/dev/.claude \
-        /home/dev/.openclaw \
         /home/dev/.config/gh \
         /workspace \
     && chown -R "${USER_UID}:${USER_GID}" /home/dev /workspace
