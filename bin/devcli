@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+# devcli — portable AI dev container launcher (bash / WSL / macOS / Linux)
+#
+# Usage (from any folder):
+#   devcli                  run Claude Code in the current folder
+#   devcli bash             open a shell in the current folder
+#   devcli openclaw ...     run OpenClaw with args
+#   devcli <cmd> [args]     run any command inside the container
+#   devcli gateway up       start the OpenClaw gateway as a background daemon
+#   devcli gateway down     stop the gateway daemon
+#   devcli gateway status   show gateway status
+#   devcli gateway url      print the tokenized dashboard URL
+#   devcli gateway logs     tail gateway logs
+
+set -euo pipefail
+
+IMAGE="devcli:latest"
+GATEWAY_NAME="devcli-gateway"
+GATEWAY_PORT="127.0.0.1:18789:18789"
+
+# On native Linux (not Docker Desktop / WSL2 with Docker Desktop), the container
+# user (UID 1000) may differ from the host user, causing bind-mount permission
+# issues. Pass --user so the process inside matches the host caller.
+# macOS Docker Desktop and WSL2 Docker Desktop handle UID remapping themselves.
+USER_FLAG=()
+if [[ "$(uname -s)" == "Linux" ]] && ! grep -qi "microsoft\|wsl" /proc/version 2>/dev/null; then
+    USER_FLAG=(--user "$(id -u):$(id -g)")
+fi
+
+# ---- gateway subcommand ----------------------------------------------------
+if [[ "${1:-}" == "gateway" ]]; then
+    GW_CMD="${2:-}"
+    case "$GW_CMD" in
+        up)
+            RUNNING=$(docker inspect --format '{{.State.Running}}' "$GATEWAY_NAME" 2>/dev/null || echo "false")
+            if [[ "$RUNNING" == "true" ]]; then
+                echo "$GATEWAY_NAME is already running."
+                exit 0
+            fi
+            docker rm "$GATEWAY_NAME" >/dev/null 2>&1 || true
+            mkdir -p "$HOME/.openclaw"
+            docker run -d --restart unless-stopped --name "$GATEWAY_NAME" \
+                -v "$HOME/.openclaw:/home/dev/.openclaw" \
+                -p "$GATEWAY_PORT" \
+                "$IMAGE" openclaw gateway run --bind lan --port 18789 --force
+            echo "$GATEWAY_NAME started on http://127.0.0.1:18789"
+            echo "Run: devcli gateway url    to get the tokenized dashboard link."
+            ;;
+        down)
+            docker rm -f "$GATEWAY_NAME" >/dev/null 2>&1 && echo "$GATEWAY_NAME stopped." || echo "$GATEWAY_NAME was not running."
+            ;;
+        status)
+            docker ps --filter "name=$GATEWAY_NAME" --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+            ;;
+        url)
+            CONF="$HOME/.openclaw/openclaw.json"
+            if [[ ! -f "$CONF" ]]; then
+                echo "No openclaw config found. Run: devcli openclaw  to initialise OpenClaw first."
+                exit 1
+            fi
+            # python3 is available on macOS (Catalina+) and most Linux/WSL distros.
+            # Fall back to running node inside the image if not present on host.
+            if command -v python3 >/dev/null 2>&1; then
+                python3 - "$CONF" <<'PYEOF'
+import json, sys, urllib.parse
+with open(sys.argv[1]) as f:
+    c = json.load(f)
+gw    = c.get('gateway') or {}
+token = gw.get('auth', {}).get('token', '')
+port  = gw.get('port', 18789)
+print(f"http://127.0.0.1:{port}/#token={urllib.parse.quote(token, safe='')}")
+PYEOF
+            else
+                docker run --rm \
+                    -v "$CONF:/home/dev/.openclaw/openclaw.json:ro" \
+                    "$IMAGE" node -e "
+                        const c=require('/home/dev/.openclaw/openclaw.json');
+                        const t=encodeURIComponent((c?.gateway?.auth?.token)||'');
+                        const p=c?.gateway?.port||18789;
+                        console.log('http://127.0.0.1:'+p+'/#token='+t);
+                    "
+            fi
+            ;;
+        logs)
+            docker logs -f "$GATEWAY_NAME"
+            ;;
+        *)
+            echo "Usage: devcli gateway <up|down|status|url|logs>"
+            exit 1
+            ;;
+    esac
+    exit 0
+fi
+
+# ---- ensure host auth dirs exist -------------------------------------------
+mkdir -p "$HOME/.claude" "$HOME/.openclaw" "$HOME/.config/gh"
+
+# ---- pass-through env vars (only if set on host) ---------------------------
+ENV_FLAGS=()
+[[ -n "${ANTHROPIC_API_KEY:-}" ]] && ENV_FLAGS+=(-e ANTHROPIC_API_KEY)
+[[ -n "${GITHUB_TOKEN:-}"      ]] && ENV_FLAGS+=(-e GITHUB_TOKEN)
+[[ -n "${GH_TOKEN:-}"          ]] && ENV_FLAGS+=(-e GH_TOKEN)
+
+# ---- optional extra port maps (DEVCLI_PORTS="-p 8000:8000 -p 5173:5173") --
+# shellcheck disable=SC2206
+PORT_FLAGS=(${DEVCLI_PORTS:-})
+
+# ---- run (ephemeral, current dir as /workspace) ----------------------------
+exec docker run --rm -it \
+    "${USER_FLAG[@]}" \
+    -v "$PWD:/workspace" \
+    -v "$HOME/.claude:/home/dev/.claude" \
+    -v "$HOME/.openclaw:/home/dev/.openclaw" \
+    -v "$HOME/.config/gh:/home/dev/.config/gh" \
+    "${ENV_FLAGS[@]}" \
+    "${PORT_FLAGS[@]}" \
+    "$IMAGE" "$@"

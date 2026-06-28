@@ -1,0 +1,4 @@
+# Agent auth — persisted from host home dirs, never committed
+.claude/
+.openclaw/
+.config/

@@ -1,0 +1,11 @@
+# Default: auto-detect text, normalize to LF
+* text=auto
+
+# Shell scripts and Makefile must always be LF (run inside Linux containers)
+bin/devcli          text eol=lf
+.devcontainer/*.sh  text eol=lf
+Makefile            text eol=lf
+
+# Windows scripts are fine with CRLF
+*.cmd   text eol=crlf
+*.ps1   text eol=crlf
