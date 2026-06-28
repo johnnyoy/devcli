@@ -21,7 +21,7 @@ if [[ "$(uname -s)" == "Linux" ]] && ! grep -qi "microsoft\|wsl" /proc/version 2
 fi
 
 # ---- ensure host auth dirs exist -------------------------------------------
-mkdir -p "$HOME/.claude" "$HOME/.config/gh"
+mkdir -p "$HOME/.claude" "$HOME/.pi" "$HOME/.config/gh"
 
 # ---- pass-through env vars (only if set on host) ---------------------------
 ENV_FLAGS=()
@@ -35,9 +35,11 @@ PORT_FLAGS=(${DEVCLI_PORTS:-})
 
 # ---- run (ephemeral, current dir as /workspace) ----------------------------
 exec docker run --rm -it \
+    --hostname devcli \
     "${USER_FLAG[@]}" \
     -v "$PWD:/workspace" \
     -v "$HOME/.claude:/home/dev/.claude" \
+    -v "$HOME/.pi:/home/dev/.pi" \
     -v "$HOME/.config/gh:/home/dev/.config/gh" \
     "${ENV_FLAGS[@]}" \
     "${PORT_FLAGS[@]}" \

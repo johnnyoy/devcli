@@ -53,4 +53,4 @@ Claude Code is installed normally. Pi harness (`@earendil-works/pi-coding-agent`
 
 ## Auth dirs
 
-`~/.claude` and `~/.config/gh` on the host are bind-mounted read-write into every container. These are never committed (`.gitignore`).
+`~/.claude`, `~/.pi`, and `~/.config/gh` on the host are bind-mounted read-write into every container. These are never committed (`.gitignore`). All containers use `--hostname devcli` so Claude Code's credential validation is consistent across ephemeral runs.

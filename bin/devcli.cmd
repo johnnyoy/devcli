@@ -13,6 +13,7 @@ REM =========================================================================
 
 REM ---- ensure host auth dirs exist ----------------------------------------
 if not exist "%USERPROFILE%\.claude"     mkdir "%USERPROFILE%\.claude"
+if not exist "%USERPROFILE%\.pi"         mkdir "%USERPROFILE%\.pi"
 if not exist "%USERPROFILE%\.config\gh"  mkdir "%USERPROFILE%\.config\gh"
 
 REM ---- pass-through env vars (only if set on host) -------------------------
@@ -27,8 +28,10 @@ if defined DEVCLI_PORTS set "_PORT_FLAGS=%DEVCLI_PORTS%"
 
 REM ---- run (ephemeral, current dir as /workspace) --------------------------
 docker run --rm -it ^
+    --hostname devcli ^
     -v "%CD%:/workspace" ^
     -v "%USERPROFILE%\.claude:/home/dev/.claude" ^
+    -v "%USERPROFILE%\.pi:/home/dev/.pi" ^
     -v "%USERPROFILE%\.config\gh:/home/dev/.config/gh" ^
     !_ENV_FLAGS! ^
     !_PORT_FLAGS! ^

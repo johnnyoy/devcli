@@ -115,7 +115,9 @@ The container is ephemeral — it is removed automatically when you exit.
 
 ## Auth persistence
 
-Your host `~/.claude` and `~/.config/gh` are bind-mounted into every container. Log in once and you stay logged in. Nothing credential-related is stored in the image.
+Your host `~/.claude`, `~/.pi`, and `~/.config/gh` are bind-mounted into every container. Log in to each agent once and you stay logged in. Nothing credential-related is stored in the image.
+
+All containers are given the hostname `devcli` so Claude Code's credential validation is consistent across runs.
 
 ### Passing an API key via environment variable
 
@@ -219,8 +221,10 @@ Each `devcli` call runs:
 
 ```
 docker run --rm -it
+  --hostname devcli              ← fixed hostname for consistent auth
   -v "$PWD:/workspace"           ← current folder becomes /workspace
   -v "$HOME/.claude:/home/dev/.claude"
+  -v "$HOME/.pi:/home/dev/.pi"
   -v "$HOME/.config/gh:/home/dev/.config/gh"
   devcli:latest [your command or "claude" by default]
 ```

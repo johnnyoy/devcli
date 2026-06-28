@@ -67,6 +67,7 @@ function Remove-FromPath {
 
 function Ensure-AuthDirs {
     $null = New-Item -ItemType Directory -Force (Join-Path $env:USERPROFILE '.claude')
+    $null = New-Item -ItemType Directory -Force (Join-Path $env:USERPROFILE '.pi')
     $null = New-Item -ItemType Directory -Force (Join-Path $env:USERPROFILE '.config\gh')
 }
 

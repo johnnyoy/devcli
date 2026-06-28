@@ -50,7 +50,7 @@ rebuild: ## Force rebuild with --no-cache (refreshes agents to latest)
 
 install-path: ## Symlink bin/devcli into ~/.local/bin
 	@chmod +x $(DEVCLI)
-	@mkdir -p $(LOCAL_BIN)
+	@mkdir -p $(LOCAL_BIN) $(HOME)/.claude $(HOME)/.pi $(HOME)/.config/gh
 	@if [ -L $(LINK) ]; then \
 	    echo "Symlink already exists at $(LINK) — nothing to do."; \
 	elif [ -e $(LINK) ]; then \

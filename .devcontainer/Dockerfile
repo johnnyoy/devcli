@@ -72,6 +72,7 @@ RUN if ! getent group "${USER_GID}" >/dev/null; then groupadd -g "${USER_GID}" d
 # (and the host bind-mount) don't land as root-owned inside the container.
 RUN mkdir -p \
         /home/dev/.claude \
+        /home/dev/.pi \
         /home/dev/.config/gh \
         /workspace \
     && chown -R "${USER_UID}:${USER_GID}" /home/dev /workspace
