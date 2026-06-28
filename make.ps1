@@ -40,19 +40,19 @@ devcli control surface
 
 function Build-Image {
     param([switch]$NoCache)
-    $args = @('build', '-t', $image, '-f', $dockerfile, $here)
-    if ($NoCache) { $args = @('build', '--no-cache', '-t', $image, '-f', $dockerfile, $here) }
-    & docker @args
+    $buildArgs = @('build', '-t', $image, '-f', $dockerfile, $here)
+    if ($NoCache) { $buildArgs = @('build', '--no-cache', '-t', $image, '-f', $dockerfile, $here) }
+    & docker @buildArgs
     if ($LASTEXITCODE -ne 0) { throw "docker build failed" }
 }
 
 function Add-ToPath {
     $current = [Environment]::GetEnvironmentVariable('Path', 'User')
-    if ($current -split ';' | Where-Object { $_ -eq $binDir }) {
-        Write-Host "bin\ is already on your user PATH — nothing to do."
+    if (($current -split ';') -contains $binDir) {
+        Write-Host "bin\ is already on your user PATH -- nothing to do."
         return
     }
-    $newPath = ($current.TrimEnd(';') + ';' + $binDir)
+    $newPath = $current.TrimEnd(';') + ';' + $binDir
     [Environment]::SetEnvironmentVariable('Path', $newPath, 'User')
     Write-Host "Added to user PATH: $binDir"
     Write-Host "Open a new PowerShell/CMD window for the change to take effect."
@@ -60,8 +60,7 @@ function Add-ToPath {
 
 function Remove-FromPath {
     $current = [Environment]::GetEnvironmentVariable('Path', 'User')
-    $parts = $current -split ';' | Where-Object { $_ -ne $binDir }
-    $newPath = $parts -join ';'
+    $newPath = (($current -split ';') | Where-Object { $_ -ne $binDir }) -join ';'
     [Environment]::SetEnvironmentVariable('Path', $newPath, 'User')
     Write-Host "Removed from user PATH: $binDir"
 }
@@ -70,6 +69,24 @@ function Ensure-AuthDirs {
     $null = New-Item -ItemType Directory -Force (Join-Path $env:USERPROFILE '.claude')
     $null = New-Item -ItemType Directory -Force (Join-Path $env:USERPROFILE '.config\gh')
 }
+
+# Doctor script runs inside the container as bash. Defined here so the
+# closing '@  can sit at column 0 as PowerShell 5.1 requires.
+$doctorScript = @'
+printf "%-12s %s\n" "tool"     "version"
+printf "%-12s %s\n" "--------" "----------------------------"
+printf "%-12s %s\n" "python"   "$(python --version 2>&1)"
+printf "%-12s %s\n" "pip"      "$(pip --version 2>&1 | cut -d' ' -f1-2)"
+printf "%-12s %s\n" "node"     "$(node --version)"
+printf "%-12s %s\n" "npm"      "$(npm --version)"
+printf "%-12s %s\n" "git"      "$(git --version | cut -d' ' -f1-3)"
+printf "%-12s %s\n" "gh"       "$(gh --version | head -n1)"
+printf "%-12s %s\n" "ripgrep"  "$(rg --version | head -n1)"
+printf "%-12s %s\n" "jq"       "$(jq --version)"
+printf "%-12s %s\n" "make"     "$(make --version | head -n1)"
+printf "%-12s %s\n" "claude"   "$(claude --version 2>/dev/null || echo 'not found')"
+printf "%-12s %s\n" "pi"       "$(pi --version 2>/dev/null || echo 'not found')"
+'@
 
 switch ($Target) {
     'help' { Show-Help }
@@ -101,26 +118,13 @@ switch ($Target) {
     }
 
     'doctor' {
-        & docker run --rm "$image" bash -lc @'
-printf "%-12s %s\n" "tool" "version"
-printf "%-12s %s\n" "------------" "----------------------------"
-printf "%-12s %s\n" "python"   "$(python --version 2>&1)"
-printf "%-12s %s\n" "pip"      "$(pip --version 2>&1 | cut -d' ' -f1-2)"
-printf "%-12s %s\n" "node"     "$(node --version)"
-printf "%-12s %s\n" "npm"      "$(npm --version)"
-printf "%-12s %s\n" "git"      "$(git --version | cut -d' ' -f1-3)"
-printf "%-12s %s\n" "gh"       "$(gh --version | head -n1)"
-printf "%-12s %s\n" "ripgrep"  "$(rg --version | head -n1)"
-printf "%-12s %s\n" "jq"       "$(jq --version)"
-printf "%-12s %s\n" "make"     "$(make --version | head -n1)"
-printf "%-12s %s\n" "claude"   "$(claude --version 2>/dev/null || echo 'not found')"
-printf "%-12s %s\n" "pi"       "$(pi --version 2>/dev/null || echo 'not found')"
-'@
+        & docker run --rm $image bash -lc $doctorScript
         if ($LASTEXITCODE -ne 0) { throw "docker run failed" }
     }
 
     default {
-        Write-Host "Unknown target: $Target`n"
+        Write-Host "Unknown target: $Target"
+        Write-Host ""
         Show-Help
         exit 1
     }
