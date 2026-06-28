@@ -12,6 +12,16 @@ fi
 git config --global --get-all safe.directory 2>/dev/null | grep -Fxq /workspace \
     || git config --global --add safe.directory /workspace
 
+# If .claude.json was bind-mounted as an empty file (new host install),
+# restore from the most recent backup so settings aren't lost.
+if [ ! -s "${HOME}/.claude.json" ]; then
+    _backup=$(ls -t "${HOME}/.claude/backups/.claude.json.backup."* 2>/dev/null | head -1)
+    if [ -n "$_backup" ]; then
+        cp "$_backup" "${HOME}/.claude.json"
+    fi
+    unset _backup
+fi
+
 # Authenticate gh CLI if GH_TOKEN or GITHUB_TOKEN is set.
 # gh auth login --with-token writes into ~/.config/gh (bind-mounted from host)
 # so the session persists across container runs.

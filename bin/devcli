@@ -20,8 +20,11 @@ if [[ "$(uname -s)" == "Linux" ]] && ! grep -qi "microsoft\|wsl" /proc/version 2
     USER_FLAG=(--user "$(id -u):$(id -g)")
 fi
 
-# ---- ensure host auth dirs exist -------------------------------------------
+# ---- ensure host auth dirs / files exist -----------------------------------
 mkdir -p "$HOME/.claude" "$HOME/.pi" "$HOME/.config/gh"
+# .claude.json must exist as a FILE before bind-mounting; Docker would create
+# a directory in its place if the path doesn't exist on the host.
+[[ -f "$HOME/.claude.json" ]] || touch "$HOME/.claude.json"
 
 # ---- pass-through env vars (only if set on host) ---------------------------
 ENV_FLAGS=()
@@ -38,6 +41,7 @@ exec docker run --rm -it \
     --hostname devcli \
     "${USER_FLAG[@]}" \
     -v "$PWD:/workspace" \
+    -v "$HOME/.claude.json:/home/dev/.claude.json" \
     -v "$HOME/.claude:/home/dev/.claude" \
     -v "$HOME/.pi:/home/dev/.pi" \
     -v "$HOME/.config/gh:/home/dev/.config/gh" \
